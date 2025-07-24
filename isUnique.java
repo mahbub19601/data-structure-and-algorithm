@@ -1,7 +1,7 @@
 /*
  the question come first is that if the string is an ASCII string or 
  a Unicode string, this shows that I have a strong foundation in computer science and for simplicity now just gonna think that this is an ASCII.
- If it is not valid we need to increase the storage size.class 01isUnique {
+ If it is not valid we need to increase the storage size.class 01isUnique 
      
 
  One solution is create an array of boolean values, 
