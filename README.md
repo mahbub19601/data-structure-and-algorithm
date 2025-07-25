@@ -9,6 +9,11 @@ This repository contains my implementation and learning progress of various **Da
 ### 📦 Data Structures
 
 - [x] Arrays
+- [ ] URLify animation ### URLify Algorithm Animation
+
+You can view the live animation of the URLify algorithm here:
+
+**[View Live Animation](https://mahbub19601.github.io/data-structure-and-algorithm/animationdsatounderstand/urlifyanimation.html)**
 - [x] Strings
 - [ ] Linked Lists (Singly & Doubly)
 - [ ] Stacks & Queues
