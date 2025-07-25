@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URLify Algorithm Animation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .char-box {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #9ca3af; /* gray-400 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: monospace;
+            font-size: 1.25rem;
+            transition: all 0.3s ease-in-out;
+            position: relative;
+        }
+        .pointer {
+            position: absolute;
+            bottom: -25px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            transition: left 0.5s ease-in-out;
+            white-space: nowrap;
+        }
+        .pointer-i { color: #3b82f6; } /* blue-500 */
+        .pointer-index { color: #ec4899; } /* pink-500 */
+
+        .char-box.reading { background-color: #60a5fa; color: white; } /* blue-400 */
+        .char-box.writing { background-color: #f472b6; color: white; } /* pink-400 */
+        .char-box.space-found { background-color: #facc15; } /* yellow-400 */
+        .char-box.final { background-color: #4ade80; color: white; } /* green-400 */
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-5xl bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-2xl font-bold text-center mb-2">URLify Algorithm Animation</h1>
+        <p class="text-center text-gray-600 mb-6">Visualizing how `"Mr John Smith    "` becomes `"Mr%20John%20Smith"`.</p>
+
+        <!-- Controls and Status -->
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 p-4 bg-gray-50 rounded-lg">
+            <div class="flex gap-4 mb-4 sm:mb-0">
+                <button id="startBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-transform transform hover:scale-105">
+                    Start Animation
+                </button>
+                <button id="resetBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-transform transform hover:scale-105 hidden">
+                    Reset
+                </button>
+            </div>
+            <div class="text-center flex-grow mx-4">
+                <h2 id="status" class="text-lg font-semibold text-gray-700">Ready to start.</h2>
+                <p id="explanation" class="text-sm text-gray-500 h-10 flex items-center justify-center">Press the button to begin.</p>
+            </div>
+            <div class="text-right">
+                <div class="font-mono text-sm"><strong>Space Count:</strong> <span id="spaceCount" class="font-bold text-yellow-500">0</span></div>
+                <div class="font-mono text-sm"><strong>True Length:</strong> <span class="font-bold">13</span></div>
+                <div class="font-mono text-sm"><strong>New Length:</strong> <span id="newLength" class="font-bold text-pink-500">?</span></div>
+            </div>
+        </div>
+        
+        <!-- Character Array Visualization -->
+        <div id="arrayContainer" class="relative flex flex-wrap justify-center p-8">
+            <!-- Character boxes will be inserted here by JS -->
+            <div id="pointerContainer" class="absolute top-0 left-0 w-full h-full"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const arrayContainer = document.getElementById('arrayContainer');
+        const pointerContainer = document.getElementById('pointerContainer');
+        const statusEl = document.getElementById('status');
+        const explanationEl = document.getElementById('explanation');
+        const spaceCountEl = document.getElementById('spaceCount');
+        const newLengthEl = document.getElementById('newLength');
+
+        const initialString = "Mr John Smith    ";
+        const trueLength = 13;
+        let charArray = initialString.split('');
+        let charBoxes = [];
+        let iPointer, indexPointer;
+        let isAnimating = false;
+
+        function sleep(ms) {
+            return new Promise(resolve => isAnimating && setTimeout(resolve, ms));
+        }
+
+        function createCharArray() {
+            arrayContainer.innerHTML = '';
+            pointerContainer.innerHTML = '';
+            charBoxes = [];
+            charArray.forEach((char, i) => {
+                const box = document.createElement('div');
+                box.className = 'char-box rounded-md m-1 bg-white';
+                box.textContent = char === ' ' ? ' ' : char;
+                box.setAttribute('data-index', i);
+                if (i >= trueLength) {
+                    box.classList.add('bg-gray-200', 'border-gray-300');
+                }
+                arrayContainer.appendChild(box);
+                charBoxes.push(box);
+            });
+        }
+
+        function createPointers() {
+            iPointer = document.createElement('div');
+            iPointer.className = 'pointer pointer-i';
+            iPointer.innerHTML = '▲<br>i (read)';
+            iPointer.style.left = `-1000px`;
+            
+            indexPointer = document.createElement('div');
+            indexPointer.className = 'pointer pointer-index';
+            indexPointer.innerHTML = '▲<br>index (write)';
+            indexPointer.style.left = `-1000px`;
+
+            pointerContainer.appendChild(iPointer);
+            pointerContainer.appendChild(indexPointer);
+        }
+        
+        function movePointer(pointerEl, boxIndex) {
+            if (!isAnimating || boxIndex < 0 || boxIndex >= charBoxes.length) {
+                 pointerEl.style.left = `-1000px`;
+                 return;
+            }
+            const targetBox = charBoxes[boxIndex];
+            pointerEl.style.left = `${targetBox.offsetLeft + targetBox.offsetWidth / 2 - pointerEl.offsetWidth / 2}px`;
+        }
+
+        function resetAnimation() {
+            isAnimating = false;
+            // A simple page reload is the most robust way to stop all pending timeouts.
+            window.location.reload();
+        }
+
+        async function startAnimation() {
+            if (isAnimating) return;
+            isAnimating = true;
+
+            startBtn.disabled = true;
+            startBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+            resetBtn.classList.remove('hidden');
+
+            createCharArray();
+            createPointers();
+            await sleep(500);
+
+            // --- Pass 1: Count Spaces ---
+            statusEl.textContent = 'Pass 1: Counting Spaces';
+            let spaceCount = 0;
+            for (let i = 0; i < trueLength; i++) {
+                if (!isAnimating) return;
+                explanationEl.innerHTML = `Checking character at index ${i}.`;
+                movePointer(iPointer, i);
+                charBoxes[i].classList.add('reading');
+                await sleep(350);
+                if (charArray[i] === ' ') {
+                    explanationEl.innerHTML = `Found a space! Incrementing space count.`;
+                    spaceCount++;
+                    spaceCountEl.textContent = spaceCount;
+                    charBoxes[i].classList.add('space-found');
+                    await sleep(600);
+                }
+                charBoxes[i].classList.remove('reading');
+                await sleep(350);
+            }
+            movePointer(iPointer, -1); // Hide pointer
+
+            // --- Calculate New Length ---
+            statusEl.textContent = 'Calculating New Length';
+            const newLength = trueLength + spaceCount * 2;
+            explanationEl.innerHTML = `Found <strong>${spaceCount}</strong> spaces. Each needs 2 extra characters.`;
+            await sleep(2500);
+            if (!isAnimating) return;
+            explanationEl.innerHTML = `New length = ${trueLength} (true) + ${spaceCount} * 2 = <strong>${newLength}</strong>.`;
+            newLengthEl.textContent = newLength;
+            await sleep(3000);
+
+            // --- Pass 2: Edit Backwards ---
+            statusEl.textContent = 'Pass 2: Editing In-Place (Backwards)';
+            explanationEl.textContent = 'Pointers now move from the end.';
+            let index = newLength;
+            await sleep(2000);
+
+            for (let i = trueLength - 1; i >= 0; i--) {
+                if (!isAnimating) return;
+                explanationEl.innerHTML = `Reading character at <strong>i = ${i}</strong>.`;
+                movePointer(iPointer, i);
+                movePointer(indexPointer, index - 1);
+                charBoxes[i].classList.add('reading');
+                await sleep(1200);
+
+                if (charArray[i] === ' ') {
+                    explanationEl.innerHTML = `It's a space. Writing <strong>'%20'</strong> at write pointer.`;
+                    charBoxes[index - 1].textContent = '0';
+                    charBoxes[index - 2].textContent = '2';
+                    charBoxes[index - 3].textContent = '%';
+                    charBoxes[index - 1].classList.add('writing');
+                    charBoxes[index - 2].classList.add('writing');
+                    charBoxes[index - 3].classList.add('writing');
+                    await sleep(1200);
+                    explanationEl.innerHTML = `Moving write pointer 'index' back by 3.`;
+                    index -= 3;
+                } else {
+                    explanationEl.innerHTML = `It's a character. Copying <strong>'${charArray[i]}'</strong> to write pointer.`;
+                    charBoxes[index - 1].textContent = charArray[i];
+                    charBoxes[index - 1].classList.add('writing');
+                    await sleep(1200);
+                    explanationEl.innerHTML = `Moving write pointer 'index' back by 1.`;
+                    index--;
+                }
+                
+                await sleep(1200);
+                charBoxes.forEach(box => box.classList.remove('reading', 'writing'));
+            }
+
+            // --- Finished ---
+            if (!isAnimating) return;
+            movePointer(iPointer, -1);
+            movePointer(indexPointer, -1);
+            statusEl.textContent = 'Animation Finished!';
+            explanationEl.textContent = 'The string has been successfully URLified in-place.';
+            for(let i=0; i < newLength; i++) {
+                charBoxes[i].classList.add('final');
+            }
+            isAnimating = false;
+        }
+
+        startBtn.addEventListener('click', startAnimation);
+        resetBtn.addEventListener('click', resetAnimation);
+        window.addEventListener('load', createCharArray);
+    </script>
+</body>
+</html>
